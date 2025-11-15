@@ -1,0 +1,13 @@
+# k8s/webapp-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+spec:
+  type: NodePort
+  selector:
+    app: webapp
+  ports:
+  - port: 80
+    targetPort: 80
+    # ❌ حذف nodePort: 30080 — خلي Kubernetes يختار port عشوائي آمن
