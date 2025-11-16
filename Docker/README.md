@@ -19,21 +19,6 @@
 
 ---
 
-## 📁 Project Structure
-DEPI-Project/
-├── docker-compose.yml # Define services (db + webapp)
-├── database/ # MySQL service
-│ ├── Dockerfile # Build MySQL image
-│ └── init.sql # Initialize database schema
-├── src/ # PHP web application
-│ ├── Dockerfile # Build PHP-Apache image
-│ ├── index.php # Welcome page
-│ ├── register.html # Registration form
-│ └── register.php # Handle registration logic
-└── README.md # You are here!
-
-
----
 
 ## 🛠️ How to Run
 
@@ -58,24 +43,3 @@ bash
 
 docker-compose down
 
-🔐 Security Notes
-Uses PDO with prepared statements to prevent SQL injection.
-Passwords are hashed using password_hash() before storage.
-Input validation on username (min 3 chars) and password (min 6 chars).
-Environment variables used for DB credentials (configurable in docker-compose.yml).
-💡 Sample Usage
-Visit http://localhost:8080 → You’ll see a welcome message.
-Click “Go to Register” → Fill the form.
-Submit → If successful, you’ll see a green success message.
-Try registering same username again → You’ll get an error.
-🧩 Future Improvements
-Add login functionality
-Implement sessions or JWT for authentication
-Add email verification
-Add admin panel to view users
-Add unit tests for PHP logic
-🤝 Contributing
-Feel free to fork this repo, make improvements, and submit a pull request!
-
-�� License
-This project is licensed under the MIT License — see the LICENSE file for details.
