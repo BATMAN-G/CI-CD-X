@@ -1,0 +1,21 @@
+services: 
+  db: 
+    build: ./database/. 
+    environment: 
+      - MYSQL_ROOT_PASSWORD=root 
+      - MYSQL_DATABASE=azzadb 
+  webapp: 
+    build: ./src/. 
+    environment: 
+      - DB_SERVERNAME=db 
+      - DB_USERNAME=root 
+      - DB_PASSWORD=root 
+      - DB_DBNAME=azzadb 
+    ports: 
+      - "8080:80" 
+    volumes: 
+      - data_volume:/var/www/html 
+    depends_on: 
+      - db 
+volumes: 
+  data_volume: 
