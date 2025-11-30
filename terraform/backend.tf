@@ -1,8 +1,8 @@
 terraform {
   backend "s3" {
-    bucket="statefile-bucket-bmfinal"
-    key="./terraform.tfstate"
-    region = "us-west-2"
+    bucket="statefile-bucket-2210xz"
+    key="terraform.tfstate"
+    region = "us-east-1"
     dynamodb_table = "statefile-table"
   }
 }

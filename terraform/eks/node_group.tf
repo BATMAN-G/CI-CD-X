@@ -33,6 +33,7 @@ resource "aws_eks_node_group" "eks-node-group" {
  node_group_name = each.key
  node_role_arn = aws_iam_role.node.arn
  subnet_ids = var.subnets_id
+ instance_types = each.value.instance_types
 
  scaling_config {
     desired_size = each.value.scaling_config.desired_size

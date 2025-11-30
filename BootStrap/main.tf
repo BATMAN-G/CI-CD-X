@@ -6,7 +6,7 @@ provider "aws" {
 # Remote Backend Setup
 # -------------------------------
 resource "aws_s3_bucket" "state-bucket" {
-  bucket = "statefile-bucket-2210"
+  bucket = "statefile-bucket-2210xz"
   tags = {
     Name = "state-buckethawarey"
   }
@@ -122,11 +122,11 @@ resource "aws_security_group" "jenkins_sg" {
 # -------------------------------
 resource "aws_instance" "jenkins_ec2" {
   ami                         = "ami-0e001c9271cf7f3b9" 
-  instance_type               = "t2.small"
+  instance_type               = "t3.small"
   subnet_id                   = aws_subnet.public_subnet.id
   vpc_security_group_ids      = [aws_security_group.jenkins_sg.id]
   associate_public_ip_address = true
-  key_name                    = "your-keypair-name"
+  key_name                    = "depii"
 
   user_data = <<-EOF
     #!/bin/bash
