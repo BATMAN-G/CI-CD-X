@@ -14,7 +14,11 @@ output "cluster_endpoint" {
   description = "EKS cluster endpoint"
   value = module.eks.cluster_endpoint
 }
-#output "nexus_public_ip" {
- # value = aws_instance.nexus_ec2.public_ip
-#}
 
+output "bastion_public_ip" {
+  value = aws_instance.bastion.public_ip
+}
+
+output "nexus_private_ip" {
+  value = aws_instance.nexus.private_ip
+}
