@@ -77,7 +77,7 @@ resource "aws_security_group" "nexus_sg" {
 # =======================
 
 resource "aws_instance" "bastion" {
-  ami                         = "ami-04b70fa74e45c3917" # Ubuntu 22.04
+  ami                         = "ami-03c1f788292172a4e" # Ubuntu 22.04
   instance_type               = "t3.micro"
   subnet_id                   = module.vpc.public_subnet_ids[0]
   associate_public_ip_address = true
@@ -95,7 +95,7 @@ resource "aws_instance" "bastion" {
 # =======================
 
 resource "aws_instance" "nexus" {
-  ami                    = "ami-04b70fa74e45c3917"
+  ami                    = "ami-03c1f788292172a4e"
   instance_type          = "c7i-flex.large"
   subnet_id              = module.vpc.private_subnet_ids[0]
 
