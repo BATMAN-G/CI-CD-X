@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('aws-access-key')  //dont forget to add credentials in jenkins with the same ID
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+    }
+
+    stages {
+
+        stage('Checkout Terraform Repo') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/BATMAN-G/CI-CD-X.git'   // 🔹 Replace with your repo
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                dir('terraform') {
+               sh """
+                   terraform --version
+                   terraform init
+                """
+                 }
+             
+            }
+        }
+
+        stage('Terraform Validate') {
+            steps {
+                dir('terraform') {
+                sh "terraform validate"
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                dir('terraform') {
+                sh "terraform plan -out=tfplan"
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir('terraform') {
+                sh "terraform apply -auto-approve tfplan"
+                }
+            }
+        }
+    }
+
+   
+}
