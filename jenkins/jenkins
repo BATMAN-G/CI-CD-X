@@ -2,35 +2,38 @@ pipeline {
     agent any
 
     environment {
-        AWS_ACCESS_KEY_ID     = credentials('aws-access-key')  //dont forget to add credentials in jenkins with the same ID
+        // 🔐 AWS Credentials
+        AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+
+        // 🚫 Disable Ansible SSH host key checking
+        ANSIBLE_HOST_KEY_CHECKING = 'False'
     }
 
     stages {
 
-        stage('Checkout Terraform Repo') {
+        stage('Checkout Repository') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/BATMAN-G/CI-CD-X.git'   // 🔹 Replace with your repo
+                    url: 'https://github.com/BATMAN-G/CI-CD-X.git'
             }
         }
 
         stage('Terraform Init') {
             steps {
                 dir('terraform') {
-               sh """
-                   terraform --version
-                   terraform init
-                """
-                 }
-             
+                    sh '''
+                        terraform --version
+                        terraform init
+                    '''
+                }
             }
         }
 
         stage('Terraform Validate') {
             steps {
                 dir('terraform') {
-                sh "terraform validate"
+                    sh 'terraform validate'
                 }
             }
         }
@@ -38,7 +41,7 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 dir('terraform') {
-                sh "terraform plan -out=tfplan"
+                    sh 'terraform plan -out=tfplan'
                 }
             }
         }
@@ -46,11 +49,54 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 dir('terraform') {
-                sh "terraform apply -auto-approve tfplan"
+                    sh 'terraform apply -auto-approve tfplan'
+                }
+            }
+        }
+
+        stage('Generate Ansible Inventory') {
+            steps {
+                dir('terraform') {
+                    script {
+                        def BASTION_IP = sh(
+                            script: "terraform output -raw bastion_public_ip",
+                            returnStdout: true
+                        ).trim()
+
+                        def NEXUS_IP = sh(
+                            script: "terraform output -raw nexus_private_ip",
+                            returnStdout: true
+                        ).trim()
+
+                        writeFile file: "../ansible/inventory", text: """
+[nexus]
+${NEXUS_IP} ansible_user=ubuntu
+
+[nexus:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyJump=ubuntu@${BASTION_IP}'
+"""
+                    }
+                }
+            }
+        }
+
+        stage('Ansible – Deploy Nexus') {
+            steps {
+                dir('ansible') {
+                    sshagent(['bastion-ssh', 'nexus-ssh']) {
+                        sh '''
+                            ansible --version
+                            ansible-playbook -i inventory playbook-nexus.yml
+                        '''
+                    }
                 }
             }
         }
     }
 
-   
+    post {
+        always {
+            cleanWs()
+        }
+    }
 }
