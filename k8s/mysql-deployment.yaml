@@ -2,8 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mysql-deployment
-  labels:
-    app: mysql
 spec:
   replicas: 1
   selector:
@@ -14,23 +12,40 @@ spec:
       labels:
         app: mysql
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - ip-10-0-1-235.us-west-2.compute.internal        #change to your node name
+      restartPolicy: Always  
       containers:
       - name: mysql
         image: mysql:8.0
-        envFrom:
-        - secretRef:
-            name: mysql-secrets
-        ports:
-        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "RootP@ss2025"
+        - name: MYSQL_DATABASE
+          value: "azzadb_new"
+        - name: MYSQL_USER
+          value: "appuser"
+        - name: MYSQL_PASSWORD
+          value: "AppU$erP@ss!2025"
         volumeMounts:
-        - name: mysql-storage
-          mountPath: /var/lib/mysql
-        - name: mysql-init
-          mountPath: /docker-entrypoint-initdb.d
+          - name: mysql-storage
+            mountPath: /var/lib/mysql
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
       volumes:
-      - name: mysql-storage
-        persistentVolumeClaim:
-          claimName: mysql-pvc
-      - name: mysql-init
-        configMap:
-          name: mysql-init-scripts
+        - name: mysql-storage
+          hostPath:
+            path: /var/lib/mysql-data  
+            type: DirectoryOrCreate 
