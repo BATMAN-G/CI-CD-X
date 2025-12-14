@@ -1,0 +1,66 @@
+pipeline {
+  agent any
+
+  environment {
+    REGISTRY = "54.185.157.204:5000"
+    APP_IMAGE = "app"
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        git 'https://github.com/your-repo.git'
+      }
+    }
+
+    stage('Docker Login') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'nexus-creds', 
+                                          usernameVariable: 'USERNAME', 
+                                          passwordVariable: 'PASSWORD')]) {
+          sh '''
+          echo $PASSWORD | docker login $REGISTRY -u $USERNAME --password-stdin
+          '''
+        }
+      }
+    }
+
+    stage('Build Image') {
+      steps {
+        sh '''
+        echo "Building App Image..."
+        docker build -f  Docker/src/Dockerfile -t $REGISTRY/$APP_IMAGE:${BUILD_NUMBER}  Docker/src
+        '''
+      }
+    }
+
+    stage('Smoke Test') {
+      steps {
+        sh '''
+        echo "Starting Smoke Test..."
+
+        # Run App container (auto remove)
+        docker run -d --rm --name test-app -p 8080:80 $REGISTRY/$APP_IMAGE:${BUILD_NUMBER}
+
+        # Wait for App to start
+        sleep 5
+
+        # Health check: App HTTP response
+        curl -I http://localhost:8080 | grep "200 OK"
+
+        echo "Smoke Test passed!"
+        '''
+      }
+    }
+
+    stage('Push Image') {
+      steps {
+        sh '''
+        echo "Pushing App Image..."
+        docker push $REGISTRY/$APP_IMAGE:${BUILD_NUMBER}
+        '''
+      }
+    }
+  }
+}
