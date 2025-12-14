@@ -8,6 +8,10 @@ pipeline {
 
         // 🚫 Disable Ansible SSH host key checking
         ANSIBLE_HOST_KEY_CHECKING = 'False'
+
+        // 🔑 Paths for SSH keys inside Jenkins container
+        BASTION_KEY = '/var/lib/jenkins/keys/bastion.pem'
+        NEXUS_KEY   = '/var/lib/jenkins/keys/nexus.pem'
     }
 
     stages {
@@ -58,22 +62,15 @@ pipeline {
             steps {
                 dir('terraform') {
                     script {
-                        def BASTION_IP = sh(
-                            script: "terraform output -raw bastion_public_ip",
-                            returnStdout: true
-                        ).trim()
-
-                        def NEXUS_IP = sh(
-                            script: "terraform output -raw nexus_private_ip",
-                            returnStdout: true
-                        ).trim()
+                        def BASTION_IP = sh(script: "terraform output -raw bastion_public_ip", returnStdout: true).trim()
+                        def NEXUS_IP = sh(script: "terraform output -raw nexus_private_ip", returnStdout: true).trim()
 
                         writeFile file: "../ansible/inventory", text: """
 [nexus]
-${NEXUS_IP} ansible_user=ubuntu ansible_ssh_private_key_file=/var/lib/jenkins/keys/nexus.pem
+${NEXUS_IP} ansible_user=ubuntu ansible_ssh_private_key_file=${NEXUS_KEY}
 
 [nexus:vars]
-ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyJump=ubuntu@${BASTION_IP}'
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyJump="ubuntu@${BASTION_IP} -i ${BASTION_KEY}"'
 """
                     }
                 }
@@ -84,6 +81,7 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/
             steps {
                 dir('ansible') {
                     sh '''
+                        chmod 600 ${BASTION_KEY} ${NEXUS_KEY}
                         ansible --version
                         ansible-playbook -i inventory playbook-nexus.yml
                     '''
