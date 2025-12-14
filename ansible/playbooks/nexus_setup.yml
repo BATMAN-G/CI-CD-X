@@ -1,7 +1,0 @@
----
-- name: Configure Nexus Repository Server
-  hosts: nexus_server
-  become: yes
-
-  roles:
-    - nexus
