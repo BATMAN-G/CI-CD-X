@@ -1,0 +1,65 @@
+---
+- name: Deploy Nexus on EC2 via Docker
+  hosts: nexus
+  become: yes
+
+  tasks:
+
+    - name: Update apt
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install required dependencies
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+
+    - name: Add Docker GPG key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+        state: present
+
+    - name: Install Docker Engine
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Docker service
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create Nexus data directory
+      ansible.builtin.file:
+        path: /opt/nexus-data
+        state: directory
+        owner: 200
+        group: 200
+        mode: '0777'
+
+    - name: Run Nexus container
+      community.docker.docker_container:
+        name: nexus
+        image: sonatype/nexus3
+        state: started
+        restart_policy: always
+        published_ports:
+          - "8081:8081"
+          - "5000:5000"
+        volumes:
+          - "/opt/nexus-data:/nexus-data"
