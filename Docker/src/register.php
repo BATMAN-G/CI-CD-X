@@ -1,69 +1,61 @@
- <?php
-// register.php
+<?php
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $servername = $_ENV['DB_SERVERNAME'] ?? 'mysql';
+    $username = $_ENV['DB_USERNAME'] ?? 'appuser';
+    $password = $_ENV['DB_PASSWORD'] ?? 'AppU$erP@ss!2025';
+    $dbname = $_ENV['DB_DBNAME'] ?? 'azzadb_new';
 
-// 1. التحقق من طريقة الطلب
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    die("Method Not Allowed");
-}
+    try {
+        $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8mb4", $username, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-// 2. أخذ المدخلات وتنظيفها
-$username = trim($_POST['username'] ?? '');
-$password = $_POST['password'] ?? '';
+        // ✅ أنشئ الجدول لو مش موجود (في أول مرة بس)
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(50) NOT NULL UNIQUE,
+                password_hash VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ");
 
-// 3. التحقق من المدخلات
-if (empty($username) || empty($password)) {
-    die("<h3 style='color:red'>Error: Username and password are required.</h3>");
-}
+        // ✅ تحقق من تكرار اليوزرنيم (Input Validation)
+        $check = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+        $check->execute([$_POST['username']]);
+        if ($check->fetch()) {
+            die("❌ Username already exists. Please choose another.");
+        }
 
-if (strlen($username) < 3) {
-    die("<h3 style='color:red'>Error: Username must be at least 3 characters.</h3>");
-}
+        // ✅ INSERT مع اسم العمود الصحيح
+        $stmt = $pdo->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
+        $stmt->execute([
+            $_POST['username'],
+            password_hash($_POST['password'], PASSWORD_DEFAULT)
+        ]);
 
-if (strlen($password) < 6) {
-    die("<h3 style='color:red'>Error: Password must be at least 6 characters.</h3>");
-}
+        echo "✅ Registration successful! <a href='/'>Go to Home</a>";
+        exit;
 
-// 4. إعداد اعتماد قاعدة البيانات من المتغيرات البيئية (زي ما عرفتها في الـDeployment)
-$host = getenv('DB_SERVERNAME') ?: 'mysql';
-$dbname = getenv('DB_DBNAME') ?: 'azzadb';
-$dbuser = getenv('DB_USERNAME') ?: 'root';
-$dbpass = getenv('DB_PASSWORD') ?: 'root';
-
-try {
-    // 5. الاتصال بقاعدة البيانات باستخدام PDO (آمن ضد SQL Injection)
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $dbuser, $dbpass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
-
-    // 6. التحقق من تكرار الـusername
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
-    $stmt->execute([$username]);
-    if ($stmt->fetch()) {
-        die("<h3 style='color:orange'>Error: Username already exists. Please choose another.</h3>");
-    }
-
-    // 7. تشفير الباسورد (استخدام password_hash — الأفضل أمانًا)
-    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
-    // 8. إدخال المستخدم الجديد
-    $stmt = $pdo->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
-    $stmt->execute([$username, $hashedPassword]);
-
-    // 9. رسالة نجاح
-    echo "<h3 style='color:green'>✅ Registration successful!</h3>";
-    echo "<p>Welcome, <strong>" . htmlspecialchars($username) . "</strong>!</p>";
-    echo "<p><a href='/login.html'>Go to Login</a></p>";
-
-} catch (PDOException $e) {
-    if ($e->getCode() == 23000) { // 23000 = Duplicate entry
-        die("<h3 style='color:orange'>Error: Username already exists. Please choose another.</h3>");
-    } else {
+    } catch(PDOException $e) {
         error_log("DB Error in register.php: " . $e->getMessage());
-        die("<h3 style='color:red'>❌ Registration failed. Please try again later.</h3>");
+        echo "❌ Registration failed. Please try again.";
     }
 }
-
 ?>
- 
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
+    <meta charset="utf-8">
+</head>
+<body>
+<h2>Register</h2>
+<form method="POST">
+    <input type="text" name="username" placeholder="Username" required minlength="3" maxlength="50"><br><br>
+    <input type="password" name="password" placeholder="Password" required minlength="6"><br><br>
+    <button type="submit">Register</button>
+</form>
+<br>
+<a href="/">⬅️ Home</a>
+</body>
+</html>
