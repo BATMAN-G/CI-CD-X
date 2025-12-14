@@ -70,7 +70,11 @@ pipeline {
 10.0.1.220 ansible_user=ubuntu ansible_ssh_private_key_file=/var/lib/jenkins/keys/nexus.pem
 
 [nexus:vars]
-ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -i /var/lib/jenkins/keys/bastion.pem ubuntu@54.187.222.90"'
+ansible_ssh_common_args='
+  -o StrictHostKeyChecking=no
+  -o UserKnownHostsFile=/dev/null
+  -o ProxyCommand=ssh -i /var/lib/jenkins/keys/bastion.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@54.187.222.90 -W %h:%p
+'
 
 
 """
