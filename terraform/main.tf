@@ -66,7 +66,7 @@ resource "aws_security_group" "bastion_sg" {
 
 resource "aws_instance" "bastion" {
   ami                         = "ami-03c1f788292172a4e" # Ubuntu 22.04
-  instance_type               = "t3.micro"
+  instance_type               = "c7i-flex.large"
   subnet_id                   = module.vpc.public_subnet_ids[0]
   associate_public_ip_address = true
 
