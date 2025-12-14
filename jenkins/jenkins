@@ -59,7 +59,7 @@ pipeline {
                 dir('terraform') {
                     script {
                         def NEXUS_PUBLIC_IP = sh(
-                            script: "terraform output -raw nexus_public_ip",
+                            script: "terraform output -raw bastion_public_ip",
                             returnStdout: true
                         ).trim()
 
