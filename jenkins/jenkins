@@ -2,16 +2,12 @@ pipeline {
     agent any
 
     environment {
-        // 🔐 AWS Credentials
         AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
 
-        // 🚫 Disable Ansible SSH host key checking
         ANSIBLE_HOST_KEY_CHECKING = 'False'
 
-        // 🔑 Paths for SSH keys inside Jenkins container
-        BASTION_KEY = '/var/lib/jenkins/keys/bastion.pem'
-        NEXUS_KEY   = '/var/lib/jenkins/keys/nexus.pem'
+        NEXUS_KEY = '/var/lib/jenkins/keys/bastion.pem'
     }
 
     stages {
@@ -62,18 +58,17 @@ pipeline {
             steps {
                 dir('terraform') {
                     script {
-                        def BASTION_IP = sh(script: "terraform output -raw bastion_public_ip", returnStdout: true).trim()
-                        def NEXUS_IP = sh(script: "terraform output -raw nexus_private_ip", returnStdout: true).trim()
+                        def NEXUS_PUBLIC_IP = sh(
+                            script: "terraform output -raw nexus_public_ip",
+                            returnStdout: true
+                        ).trim()
 
                         writeFile file: "../ansible/inventory", text: """
 [nexus]
-10.0.1.220 ansible_user=ubuntu ansible_ssh_private_key_file=/var/lib/jenkins/keys/nexus.pem
+${NEXUS_PUBLIC_IP} ansible_user=ubuntu ansible_ssh_private_key_file=${NEXUS_KEY}
 
 [nexus:vars]
-ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -i /var/lib/jenkins/keys/bastion.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@54.187.222.90 -W %h:%p"'
-
-
-
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 """
                     }
                 }
@@ -84,7 +79,7 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/
             steps {
                 dir('ansible') {
                     sh '''
-                        chmod 600 ${BASTION_KEY} ${NEXUS_KEY}
+                        chmod 600 ${NEXUS_KEY}
                         ansible --version
                         ansible-playbook -i inventory playbook-nexus.yml
                     '''
