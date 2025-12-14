@@ -91,20 +91,6 @@ resource "aws_instance" "bastion" {
 }
 
 # =======================
-# Nexus EC2 (Private)
-# =======================
 
-resource "aws_instance" "nexus" {
-  ami                    = "ami-03c1f788292172a4e"
-  instance_type          = "c7i-flex.large"
-  subnet_id              = module.vpc.private_subnet_ids[0]
-
-  key_name               = "b1"
-  vpc_security_group_ids = [aws_security_group.nexus_sg.id]
-
-  tags = {
-    Name = "nexus-server"
-  }
-}
 
 
