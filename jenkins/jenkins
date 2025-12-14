@@ -67,10 +67,11 @@ pipeline {
 
                         writeFile file: "../ansible/inventory", text: """
 [nexus]
-${NEXUS_IP} ansible_user=ubuntu ansible_ssh_private_key_file=${NEXUS_KEY}
+10.0.1.162 ansible_user=ubuntu ansible_ssh_private_key_file=/var/lib/jenkins/keys/nexus.pem
 
 [nexus:vars]
-ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -J "ubuntu@34.220.28.53 -i /var/lib/jenkins/keys/bastion.pem"'
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand="ssh -W %h:%p -i /var/lib/jenkins/keys/bastion.pem ubuntu@34.220.28.53"'
+
 
 """
                     }
