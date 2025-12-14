@@ -23,28 +23,9 @@ module "eks" {
 # Security Groups
 # =======================
 
+
 resource "aws_security_group" "bastion_sg" {
-  name        = "bastion-sg"
-  vpc_id      = module.vpc.vpc_id
-  description = "Allow SSH from Jenkins"
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # ضع IP جينكينز هنا
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_security_group" "nexus_sg" {
-  name        = "nexus-sg"
+  name        = bastion_sg"
   vpc_id      = module.vpc.vpc_id
   description = "Allow traffic only from Bastion"
 
@@ -53,7 +34,7 @@ resource "aws_security_group" "nexus_sg" {
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
-    security_groups = [aws_security_group.bastion_sg.id]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
@@ -61,7 +42,14 @@ resource "aws_security_group" "nexus_sg" {
     from_port   = 8081
     to_port     = 8081
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"]
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+ # Port 5000
+  ingress {
+    from_port   = 5000
+    to_port     = 5000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  
   }
 
   egress {
