@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    REGISTRY = "54.185.157.204:5000"
+    REGISTRY = "52.39.221.133:5000"
     APP_IMAGE = "app"
   }
 
