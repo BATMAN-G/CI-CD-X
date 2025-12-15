@@ -10,7 +10,8 @@ pipeline {
 
     stage('Checkout') {
       steps {
-        git 'https://github.com/BATMAN-G/CI-CD-X.git'
+        git branch: 'main',
+            url: 'https://github.com/BATMAN-G/CI-CD-X.git'
       }
     }
 
@@ -30,7 +31,7 @@ pipeline {
       steps {
         sh '''
         echo "Building App Image..."
-        docker build -f  Docker/src/Dockerfile -t $REGISTRY/$APP_IMAGE:${BUILD_NUMBER}  Docker/src
+        docker build -f Docker/src/Dockerfile -t $REGISTRY/$APP_IMAGE:${BUILD_NUMBER} Docker/src
         '''
       }
     }
