@@ -41,8 +41,8 @@ pipeline {
         sh '''
         echo "Starting Smoke Test..."
 
-        # Run App container (auto remove)
-        docker run -d --rm --name test-app -p 8080:80 $REGISTRY/$APP_IMAGE:${BUILD_NUMBER}
+        # Run App container on a free host port (8085) and auto-remove
+        docker run -d --rm --name test-app -p 8085:80 $REGISTRY/$APP_IMAGE:${BUILD_NUMBER}
 
         # Wait for App to start
         sleep 5
