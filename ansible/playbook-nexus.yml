@@ -1,36 +1,37 @@
 ---
-- name: Deploy Nexus on EC2 via Docker
+- name: Deploy Nexus with HTTPS via Nginx on EC2
   hosts: nexus
   become: yes
 
   tasks:
 
     - name: Update apt
-      ansible.builtin.apt:
+      apt:
         update_cache: yes
 
-    - name: Install required dependencies
-      ansible.builtin.apt:
+    - name: Install required packages
+      apt:
         name:
           - apt-transport-https
           - ca-certificates
           - curl
           - gnupg
           - lsb-release
+          - openssl
         state: present
 
     - name: Add Docker GPG key
-      ansible.builtin.apt_key:
+      apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
 
     - name: Add Docker repository
-      ansible.builtin.apt_repository:
+      apt_repository:
         repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
         state: present
 
-    - name: Install Docker Engine
-      ansible.builtin.apt:
+    - name: Install Docker
+      apt:
         name:
           - docker-ce
           - docker-ce-cli
@@ -38,28 +39,89 @@
         state: present
         update_cache: yes
 
-    - name: Start and enable Docker service
-      ansible.builtin.service:
+    - name: Enable Docker
+      service:
         name: docker
         state: started
         enabled: true
 
+    # ------------------ Nexus Data ------------------
     - name: Create Nexus data directory
-      ansible.builtin.file:
+      file:
         path: /opt/nexus-data
         state: directory
         owner: 200
         group: 200
-        mode: '0777'
+        mode: '0755'
 
+    # ------------------ SSL ------------------
+    - name: Create SSL directory
+      file:
+        path: /opt/nexus-ssl
+        state: directory
+        mode: '0755'
+
+    - name: Generate self-signed SSL certificate
+      shell: |
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout /opt/nexus-ssl/ssl.key \
+        -out /opt/nexus-ssl/ssl.crt \
+        -subj "/C=EG/ST=Cairo/L=Cairo/O=DEPI/CN={{ ansible_host }}"
+      args:
+        creates: /opt/nexus-ssl/ssl.crt
+
+    # ------------------ Nexus ------------------
     - name: Run Nexus container
       community.docker.docker_container:
         name: nexus
         image: sonatype/nexus3
         state: started
         restart_policy: always
-        published_ports:
+        ports:
           - "8081:8081"
           - "5000:5000"
         volumes:
-          - "/opt/nexus-data:/nexus-data"
+          - /opt/nexus-data:/nexus-data
+        pull: true
+
+    # ------------------ Nginx Config ------------------
+    - name: Create Nginx config
+      copy:
+        dest: /opt/nexus-ssl/nginx.conf
+        content: |
+          events {}
+          http {
+            upstream nexus_registry {
+              server 127.0.0.1:5000;
+            }
+
+            server {
+              listen 8443 ssl;
+
+              ssl_certificate /etc/nginx/ssl/ssl.crt;
+              ssl_certificate_key /etc/nginx/ssl/ssl.key;
+
+              client_max_body_size 0;
+              proxy_buffering off;
+
+              location / {
+                proxy_pass http://nexus_registry;
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $remote_addr;
+              }
+            }
+          }
+
+    # ------------------ Nginx ------------------
+    - name: Run Nginx reverse proxy
+      community.docker.docker_container:
+        name: nginx-nexus
+        image: nginx:alpine
+        state: started
+        restart_policy: always
+        network_mode: host
+        volumes:
+          - /opt/nexus-ssl/nginx.conf:/etc/nginx/nginx.conf:ro
+          - /opt/nexus-ssl/ssl.crt:/etc/nginx/ssl/ssl.crt:ro
+          - /opt/nexus-ssl/ssl.key:/etc/nginx/ssl/ssl.key:ro
+        pull: true
