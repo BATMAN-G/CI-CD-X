@@ -47,7 +47,7 @@ pipeline {
         sleep 5
 
         # Health check: App HTTP response
-        curl -I http://localhost:8080 | grep "200 OK"
+        curl -I http://localhost:8085 | grep "200 OK"
 
         echo "Smoke Test passed!"
         '''
