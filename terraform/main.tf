@@ -19,66 +19,100 @@ module "eks" {
 #        Nexus + Bastion HARD-CODED
 ############################################
 
-# =======================
-# Security Groups
-# =======================
+############################
+# ECR Repository
+############################
 
+resource "aws_ecr_repository" "app" {
+  name = "my-app"
 
-resource "aws_security_group" "bastion_sg" {
-  name        = "bastion_sg"
-  vpc_id      = module.vpc.vpc_id
-  description = "Allow traffic only from Bastion"
-
-  ingress {
-    description     = "SSH from bastion"
-    from_port       = 22
-    to_port         = 22
-    protocol        = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  image_scanning_configuration {
+    scan_on_push = true
   }
 
-  ingress {
-    description = "Nexus UI internal only"
-    from_port   = 8081
-    to_port     = 8081
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
- # Port 5000
-  ingress {
-    from_port   = 5000
-    to_port     = 5000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# =======================
-# Bastion EC2 (Public)
-# =======================
-
-resource "aws_instance" "bastion" {
-  ami                         = "ami-03c1f788292172a4e" # Ubuntu 22.04
-  instance_type               = "c7i-flex.large"
-  subnet_id                   = module.vpc.public_subnet_ids[0]
-  associate_public_ip_address = true
-
-  key_name               = "b2"  # دخّل اسم مفتاحك
-  vpc_security_group_ids = [aws_security_group.bastion_sg.id]
+  image_tag_mutability = "MUTABLE"
 
   tags = {
-    Name = "bastion-host"
+    Name = "my-app-ecr"
   }
 }
 
-# =======================
+output "ecr_repo_url" {
+  value = aws_ecr_repository.app.repository_url
+}
+
+############################
+# IAM Role for Jenkins EC2
+############################
+
+resource "aws_iam_role" "jenkins_role" {
+  name = "jenkins-terraform-ecr-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+############################
+# Jenkins Policy (Terraform + ECR + EKS)
+############################
+
+resource "aws_iam_policy" "jenkins_policy" {
+  name = "jenkins-terraform-policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+
+      # Terraform (VPC, EKS, IAM, etc.)
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:*",
+          "iam:*",
+          "eks:*",
+          "ecr:*",
+          "elasticloadbalancing:*",
+          "autoscaling:*",
+          "logs:*",
+          "cloudwatch:*"
+        ]
+        Resource = "*"
+      },
+
+      # Required for kubectl / aws cli
+      {
+        Effect = "Allow"
+        Action = [
+          "sts:GetCallerIdentity"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "jenkins_attach" {
+  role       = aws_iam_role.jenkins_role.name
+  policy_arn = aws_iam_policy.jenkins_policy.arn
+}
+
+############################
+# Instance Profile
+############################
+
+resource "aws_iam_instance_profile" "jenkins_profile" {
+  name = "jenkins-profile"
+  role = aws_iam_role.jenkins_role.name
+}
+
 
 
 
