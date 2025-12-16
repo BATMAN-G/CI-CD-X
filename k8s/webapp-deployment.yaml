@@ -16,15 +16,12 @@ spec:
     spec:
       containers:
       - name: webapp
-        image: selconyt/depi-project-webapp:v1.6  # حط هنا اسم الصورة اللي عملتها
-        env:
-        - name: DB_SERVERNAME
-          value: "mysql"
-        - name: DB_USERNAME
-          value: "appuser"
-        - name: DB_PASSWORD
-          value: "AppU$erP@ss!2025"
-        - name: DB_DBNAME
-          value: "azzadb_new"
+        image: 073343496324.dkr.ecr.us-west-2.amazonaws.com/my-app:17        # حط هنا اسم الصورة اللي عملتها
+        envFrom:
+        - secretRef:
+            name: webapp-creds
         ports:
         - containerPort: 80
+      imagePullSecrets:
+        - name: ecr-secret
+
