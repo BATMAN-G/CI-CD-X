@@ -1,5 +1,3 @@
-#mysql-deployment.yaml
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,20 +20,23 @@ spec:
                   - key: kubernetes.io/hostname
                     operator: In
                     values:
-                      - ip-10-0-1-235.us-west-2.compute.internal        #change to your node name
-      restartPolicy: Always  
+                      - minikube     #change to your node name
+      restartPolicy: Always  # (اختياري — الافتراضي بالفعل Always في Deployment)
       containers:
       - name: mysql
         image: mysql:8.0
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          value: "RootP@ss2025"
-        - name: MYSQL_DATABASE
-          value: "azzadb_new"
-        - name: MYSQL_USER
-          value: "appuser"
-        - name: MYSQL_PASSWORD
-          value: "AppU$erP@ss!2025"
+        envFrom:
+        - secretRef:
+            name: mysql-creds
+        # env:
+        # - name: MYSQL_ROOT_PASSWORD
+        #   value: "RootP@ss2025"
+        # - name: MYSQL_DATABASE
+        #   value: "azzadb_new"
+        # - name: MYSQL_USER
+        #   value: "appuser"
+        # - name: MYSQL_PASSWORD
+        #   value: "AppU$erP@ss!2025"
         volumeMounts:
           - name: mysql-storage
             mountPath: /var/lib/mysql
@@ -49,5 +50,5 @@ spec:
       volumes:
         - name: mysql-storage
           hostPath:
-            path: /var/lib/mysql-data  
+            path: /var/lib/mysql-data  # 👈 المجلد هيُنشَأ تلقائيًا على الـ node
             type: DirectoryOrCreate 
