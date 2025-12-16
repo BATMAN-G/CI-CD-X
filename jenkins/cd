@@ -1,0 +1,63 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_DEFAULT_REGION = 'us-west-2'
+        CLUSTER_NAME = 'Depii-cluster'
+        NAMESPACE = 'default'   // غيرها لو شغلك في namespace تاني
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/BATMAN-G/CI-CD-X.git'
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh '''
+                        echo "🔧 Updating kubeconfig..."
+                        aws eks update-kubeconfig \
+                          --region $AWS_DEFAULT_REGION \
+                          --name $CLUSTER_NAME
+
+                        echo "🚀 Applying Kubernetes manifests..."
+                        kubectl apply -f k8s/
+                    '''
+                }
+            }
+        }
+
+        stage('Get LoadBalancer URL') {
+            steps {
+                sh '''
+                    echo "⏳ Waiting for LoadBalancer External IP..."
+
+                    for i in {1..30}; do
+                      LB=$(kubectl get svc -n $NAMESPACE \
+                        -o jsonpath='{.items[?(@.spec.type=="LoadBalancer")].status.loadBalancer.ingress[0].hostname}')
+
+                      if [ ! -z "$LB" ]; then
+                        echo "✅ LoadBalancer URL:"
+                        echo "🌐 http://$LB"
+                        exit 0
+                      fi
+
+                      echo "⏳ Still waiting..."
+                      sleep 10
+                    done
+
+                    echo "❌ LoadBalancer not ready after timeout"
+                    exit 1
+                '''
+            }
+        }
+    }
+}
