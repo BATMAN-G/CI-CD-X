@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     AWS_REGION = "us-west-2"   // عدّل على حسب منطقتك
-    ECR_REPO   = "073343496324.dkr.ecr.us-west-2.amazonaws.com/app"
+    ECR_REPO   = "073343496324.dkr.ecr.us-west-2.amazonaws.com/my-app"
     APP_IMAGE  = "app"
   }
 
