@@ -2,8 +2,9 @@ pipeline {
   agent any
 
   environment {
-    REGISTRY = "16.146.250.164:5000"
-    APP_IMAGE = "app"
+    AWS_REGION = "us-west-2"   // عدّل على حسب منطقتك
+    ECR_REPO   = "073343496324.dkr.ecr.us-west-2.amazonaws.com/app"
+    APP_IMAGE  = "app"
   }
 
   stages {
@@ -15,23 +16,12 @@ pipeline {
       }
     }
 
-    stage('Docker Login') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'nexus-creds', 
-                                          usernameVariable: 'USERNAME', 
-                                          passwordVariable: 'PASSWORD')]) {
-          sh '''
-          echo $PASSWORD | docker login $REGISTRY -u $USERNAME --password-stdin
-          '''
-        }
-      }
-    }
-
-    stage('Build Image') {
+    stage('Build & Tag Image') {
       steps {
         sh '''
-        echo "Building App Image..."
-        docker build -f Docker/src/Dockerfile -t $REGISTRY/$APP_IMAGE:${BUILD_NUMBER} Docker/src
+          echo "Building App Image..."
+          docker build -f Docker/src/Dockerfile -t $APP_IMAGE:${BUILD_NUMBER} Docker/src
+          docker tag $APP_IMAGE:${BUILD_NUMBER} $ECR_REPO:${BUILD_NUMBER}
         '''
       }
     }
@@ -39,29 +29,33 @@ pipeline {
     stage('Smoke Test') {
       steps {
         sh '''
-        echo "Starting Smoke Test..."
+          echo "Starting Smoke Test..."
 
-        # Run App container on a free host port (8085) and auto-remove
-        docker run -d --rm --name test-app -p 8085:80 $REGISTRY/$APP_IMAGE:${BUILD_NUMBER}
+          docker run -d --rm --name test-app -p 8085:80 $ECR_REPO:${BUILD_NUMBER}
 
-        # Wait for App to start
-        sleep 5
+          sleep 5
 
-        # Health check: App HTTP response
-        curl -I http://localhost:8085 | grep "200 OK"
+          curl -I http://localhost:8085 | grep "200 OK"
 
-        echo "Smoke Test passed!"
+          echo "Smoke Test passed!"
         '''
       }
     }
 
-    stage('Push Image') {
+    stage('Push Image to ECR') {
       steps {
         sh '''
-        echo "Pushing App Image..."
-        docker push $REGISTRY/$APP_IMAGE:${BUILD_NUMBER}
+          echo "Pushing App Image to ECR..."
+          docker push $ECR_REPO:${BUILD_NUMBER}
         '''
       }
+    }
+
+  }
+
+  post {
+    always {
+      sh 'docker ps -a'
     }
   }
 }
