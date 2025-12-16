@@ -4,10 +4,6 @@ pipeline {
     environment {
         AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
-
-        ANSIBLE_HOST_KEY_CHECKING = 'False'
-
-        NEXUS_KEY = '/var/lib/jenkins/keys/bastion.pem'
     }
 
     stages {
@@ -50,39 +46,6 @@ pipeline {
             steps {
                 dir('terraform') {
                     sh 'terraform apply -auto-approve tfplan'
-                }
-            }
-        }
-
-        stage('Generate Ansible Inventory') {
-            steps {
-                dir('terraform') {
-                    script {
-                        def NEXUS_PUBLIC_IP = sh(
-                            script: "terraform output -raw bastion_public_ip",
-                            returnStdout: true
-                        ).trim()
-
-                        writeFile file: "../ansible/inventory", text: """
-[nexus]
-${NEXUS_PUBLIC_IP} ansible_user=ubuntu ansible_ssh_private_key_file=${NEXUS_KEY}
-
-[nexus:vars]
-ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-"""
-                    }
-                }
-            }
-        }
-
-        stage('Ansible – Deploy Nexus') {
-            steps {
-                dir('ansible') {
-                    sh '''
-                        chmod 600 ${NEXUS_KEY}
-                        ansible --version
-                        ansible-playbook -i inventory playbook-nexus.yml
-                    '''
                 }
             }
         }
