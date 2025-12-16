@@ -1,0 +1,21 @@
+#mysql-creds.yaml
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-creds
+type: Opaque
+data:
+  # القيم لازم تكون base64-encoded
+  # مثال: echo -n "appuser" | base64 → Um9vdFBAc3MyMDI1
+  MYSQL_ROOT_PASSWORD: Um9vdFBAc3MyMDI1
+  MYSQL_USER: YXBwdXNlcg==
+  MYSQL_PASSWORD: QXBwVSRlclBAc3MhMjAyNQ==
+  MYSQL_DATABASE: YXp6YWRiX25ldw==
+  DB_SERVERNAME: bXlzcWw=
+  DB_USERNAME : YXBwdXNlcg==
+  DB_PASSWORD : QXBwVSRlclBAc3MhMjAyNQ==
+  DB_DBNAME:  YXp6YWRiX25ldw==
+
+
+
