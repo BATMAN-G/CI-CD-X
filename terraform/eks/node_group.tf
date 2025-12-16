@@ -50,3 +50,8 @@ resource "aws_eks_node_group" "eks-node-group" {
     aws_iam_role_policy_attachment.node_policy
   ]
 }
+resource "aws_iam_role_policy_attachment" "node_ecr_pull" {
+  role       = aws_iam_role.node_group_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
