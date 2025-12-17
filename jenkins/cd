@@ -1,66 +1,80 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    AWS_DEFAULT_REGION = 'us-west-2'
-    CLUSTER_NAME = 'Depii-cluster'
-    NAMESPACE = 'default'
-  }
-
-  stages {
-
-    stage('Checkout') {
-      steps {
-        git branch: 'main',
-            url: 'https://github.com/BATMAN-G/CI-CD-X.git'
-      }
+    environment {
+        AWS_DEFAULT_REGION = 'us-west-2'
+        CLUSTER_NAME       = 'Depii-cluster'
+        NAMESPACE          = 'default'
     }
 
-    stage('Deploy to EKS') {
-      steps {
-        withCredentials([[
-          $class: 'AmazonWebServicesCredentialsBinding',
-          credentialsId: 'aws-eks-creds'
-        ]]) {
-          sh '''
-            export KUBECONFIG=$WORKSPACE/kubeconfig
+    stages {
 
-            echo "🔧 Updating kubeconfig..."
-            aws eks update-kubeconfig \
-              --region $AWS_DEFAULT_REGION \
-              --name $CLUSTER_NAME \
-              --kubeconfig $KUBECONFIG
-
-            echo "🚀 Applying Kubernetes manifests..."
-            kubectl apply -f k8s/
-          '''
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/BATMAN-G/CI-CD-X.git'
+            }
         }
-      }
+
+        stage('Deploy to EKS') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh '''
+                        set -e
+
+                        echo "🔧 Setting kubeconfig..."
+                        export KUBECONFIG=$WORKSPACE/kubeconfig
+
+                        echo "🔧 Updating kubeconfig from EKS..."
+                        aws eks update-kubeconfig \
+                          --region $AWS_DEFAULT_REGION \
+                          --name $CLUSTER_NAME \
+                          --kubeconfig $KUBECONFIG
+
+                        echo "🚀 Deploying manifests..."
+                        kubectl apply -f k8s/
+                    '''
+                }
+            }
+        }
+
+        stage('Get LoadBalancer URL') {
+            steps {
+                sh '''
+                    echo "⏳ Waiting for LoadBalancer..."
+
+                    for i in {1..30}; do
+                        LB=$(kubectl get svc -n $NAMESPACE \
+                          --field-selector spec.type=LoadBalancer \
+                          -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
+
+                        if [ -n "$LB" ]; then
+                            echo "✅ LoadBalancer is ready"
+                            echo "🌐 Application URL:"
+                            echo "http://$LB"
+                            exit 0
+                        fi
+
+                        echo "⏳ Still waiting..."
+                        sleep 10
+                    done
+
+                    echo "❌ LoadBalancer not ready after timeout"
+                    exit 1
+                '''
+            }
+        }
     }
 
-    stage('Get LoadBalancer URL') {
-      steps {
-        sh '''
-          echo "⏳ Waiting for LoadBalancer..."
-
-          for i in {1..30}; do
-            LB=$(kubectl get svc -n $NAMESPACE \
-              --field-selector spec.type=LoadBalancer \
-              -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
-
-            if [ -n "$LB" ]; then
-              echo "✅ LoadBalancer URL:"
-              echo "🌐 http://$LB"
-              exit 0
-            fi
-
-            sleep 10
-          done
-
-          echo "❌ LoadBalancer not ready"
-          exit 1
-        '''
-      }
+    post {
+        success {
+            echo '✅ Deployment completed successfully'
+        }
+        failure {
+            echo '❌ Deployment failed'
+        }
     }
-  }
 }
