@@ -20,7 +20,7 @@ spec:
                   - key: kubernetes.io/hostname
                     operator: In
                     values:
-                      - minikube     #change to your node name
+                      - ip-10-0-2-222.us-west-2.compute.internal     #change to your node name
       restartPolicy: Always  # (اختياري — الافتراضي بالفعل Always في Deployment)
       containers:
       - name: mysql
