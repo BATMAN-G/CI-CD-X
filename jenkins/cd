@@ -40,33 +40,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Get LoadBalancer URL') {
-            steps {
-                sh '''
-                    echo "⏳ Waiting for LoadBalancer..."
-
-                    for i in {1..30}; do
-                        LB=$(kubectl get svc -n $NAMESPACE \
-                          --field-selector spec.type=LoadBalancer \
-                          -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
-
-                        if [ -n "$LB" ]; then
-                            echo "✅ LoadBalancer is ready"
-                            echo "🌐 Application URL:"
-                            echo "http://$LB"
-                            exit 0
-                        fi
-
-                        echo "⏳ Still waiting..."
-                        sleep 10
-                    done
-
-                    echo "❌ LoadBalancer not ready after timeout"
-                    exit 1
-                '''
-            }
-        }
     }
 
     post {
