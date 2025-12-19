@@ -1,50 +1,57 @@
 # 🐳 Kubernetes Manifests for DEPI Project
 
-This folder contains all Kubernetes deployment files for the PHP web application with MySQL database.
+This folder contains all Kubernetes manifests to deploy a **PHP web application** with a **MySQL database** on EKS (or any Kubernetes cluster).
 
-## 📁 Files Included
+✅ Fully declarative  
+✅ Uses Secrets for credentials  
+✅ External access via LoadBalancer  
+✅ Ready for CI/CD integration (e.g., Jenkins)
 
-- `mysql-deployment.yaml` → MySQL server deployment
-- `mysql-service.yaml` → Service to expose MySQL internally
-- `webapp-deployment.yaml` → Web application deployment
-- `webapp-service.yaml` → Service to expose web app externally
+---
 
-## 🛠 How to Deploy
+## 📁 Included Files
 
-1. Apply Secrets
+| File | Purpose |
+|------|---------|
+| `mysql-deployment.yaml` | Deploys MySQL as a Deployment (with PVC for persistence) |
+| `mysql-service.yaml` | Internal `ClusterIP` service for MySQL |
+| `webapp-deployment.yaml` | Deploys the PHP web application (pulled from ECR) |
+| `webapp-service.yaml` | External `LoadBalancer` service to expose the app |
+| `ecr-secret.yaml` | Pull secret for Amazon ECR authentication |
+| `mysql-creds.yaml` | Secret for MySQL root password |
+| `webapp-creds.yaml` | Secret for DB connection (user, pass, host, etc.) |
+
+> 💡 All manifests are namespaced under `default`. Modify `-n <namespace>` if needed.
+
+---
+
+## 🚀 Quick Deployment
+
+### 1️⃣ Apply Secrets (⚠️ do this first!)
+```bash
 kubectl apply -f ecr-secret.yaml
 kubectl apply -f mysql-creds.yaml
 kubectl apply -f webapp-creds.yaml
 
-2. Deploy MySQL
+2️⃣ Deploy MySQL
 kubectl apply -f mysql-deployment.yaml
 kubectl apply -f mysql-service.yaml
 
-Wait for MySQL pod to be ready:
+🔍 Wait until MySQL is ready:
 kubectl get pods -l app=mysql --watch
+# ✅ Expected: mysql-xxxxx   1/1   Running
 
-3. Deploy Web Application
+3️⃣ Deploy Web Application
 kubectl apply -f webapp-deployment.yaml
 kubectl apply -f webapp-service.yaml
 
-4. Get LoadBalancer URL
-kubectl get svc -n default -o jsonpath='{.items[?(@.spec.type=="LoadBalancer")].status.loadBalancer.ingress[0].hostname}'
+4️⃣ Get Public URL
+# Try hostname first (common in EKS)
+kubectl get svc webapp -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 
-❗ Troubleshooting
-Pods stuck in Pending state?
-Check if PVC is bound: kubectl get pvc
-Check node resources: kubectl describe nodes
+# If empty, try IP
+kubectl get svc webapp -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+➡️ Open in browser: http://<RESULT>
 
-Webapp can’t connect to MySQL?
-Verify MYSQL_HOST matches the service name (usually mysql).
-Check secret values: kubectl get secret webapp-creds -o yaml
 
-LoadBalancer External IP never appears?
-Wait 5-10 minutes — ELB creation takes time.
-Check VPC/Subnet settings — must be tagged for EKS load balancers.
-
-Jenkins pipeline fails?
-Check logs for kubectl apply errors.
-Validate AWS credentials and IAM roles.
-Confirm file paths (e.g., k8s/ folder exists).
 
