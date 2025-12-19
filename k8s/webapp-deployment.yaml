@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: webapp
-        image: 073343496324.dkr.ecr.us-west-2.amazonaws.com/my-app:17        # حط هنا اسم الصورة اللي عملتها
+        image: 073343496324.dkr.ecr.us-west-2.amazonaws.com/my-app:18        # حط هنا اسم الصورة اللي عملتها
         envFrom:
         - secretRef:
             name: webapp-creds
