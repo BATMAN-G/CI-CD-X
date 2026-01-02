@@ -1,6 +1,8 @@
 # CI-CD-X: End-to-End DevOps Pipeline on AWS
 
-![Infrastructure](https://drive.google.com/file/d/1X44SdOY64WVLcbJOCrSXJOPukLUwpVJJ/view?usp=sharing)
+Infrastructure
+
+<img width="1512" height="917" alt="Screenshot 2026-01-02 185027" src="https://github.com/user-attachments/assets/56af7974-f08f-42c6-8d61-9fc48597ac24" />
 
 A fully automated DevOps pipeline deploying a secure PHP-MySQL web application on **Amazon EKS**, built using industry-standard tools: **AWS**, **Terraform**, **Jenkins**, **Kubernetes**, **Docker**, and **Ansible**.
 
